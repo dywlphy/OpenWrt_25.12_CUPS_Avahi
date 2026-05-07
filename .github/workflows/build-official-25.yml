@@ -46,12 +46,12 @@ jobs:
 
     - name: Load custom feeds and config
       run: |
-        [ -f config.txt ] && cp config.txt openwrt/.config
-        [ -f diy-part1.sh ] && cp diy-part1.sh openwrt/
-        [ -f diy-part2.sh ] && cp diy-part2.sh openwrt/
-        chmod +x openwrt/diy-part1.sh openwrt/diy-part2.sh 2>/dev/null || true
+        [ -f config-25.txt ] && cp config-25.txt openwrt/.config
+        [ -f diy-part1-25.sh ] && cp diy-part1-25.sh openwrt/
+        [ -f diy-part2-25.sh ] && cp diy-part2-25.sh openwrt/
+        chmod +x openwrt/diy-part1-25.sh openwrt/diy-part2-25.sh 2>/dev/null || true
         cd openwrt
-        ./diy-part1.sh
+        ./diy-part1-25.sh
 
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
@@ -62,7 +62,7 @@ jobs:
     - name: Run diy-part2.sh (after feeds ready)
       run: |
         cd openwrt
-        ./diy-part2.sh
+        ./diy-part2-25.sh
 
     - name: Remove conflicting packages
       run: |
