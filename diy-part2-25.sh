@@ -12,6 +12,20 @@ for cfg in target/linux/x86/image/grub-efi.cfg target/linux/x86/image/grub-pc.cf
         echo "  ✅ 已修改 $(basename $cfg): timeout=0"
     fi
 done
+
+# ----- 修复 cups-bjnp Makefile 路径错误 -----
+echo "===== 修复 cups-bjnp Makefile 路径错误 ====="
+CUPSBJNP_MK="feeds/immortalwrt/utils/cups-bjnp/Makefile"
+if [ -f "$CUPSBJNP_MK" ]; then
+    # 修复错误的 cupsbackenddir 路径
+    # 原错误路径：$(STAGING_DIR)/usr/include/cups
+    # 正确路径：$(STAGING_DIR)/usr/lib/cups/backend
+    sed -i 's|--with-cupsbackenddir=$(STAGING_DIR)/usr/include/cups|--with-cupsbackenddir=$(STAGING_DIR)/usr/lib/cups/backend|' "$CUPSBJNP_MK"
+    echo "  ✅ 已修复 cups-bjnp cupsbackenddir 路径"
+else
+    echo "  ⚠️ 未找到 cups-bjnp Makefile，跳过修复"
+fi
+
 # ----- 创建自启动目录 -----
 mkdir -p files/etc/init.d files/etc/rc.d
 # ----- 服务自启动脚本 -----
