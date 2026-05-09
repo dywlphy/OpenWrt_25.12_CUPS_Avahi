@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================
-# diy-part2.sh - 自启动脚本 + 自动共享 + CUPS 包安装 + GRUB修复
+# diy-part2-25.sh - 自启动脚本 + 自动共享 + CUPS 包安装 + GRUB修复
 # OpenWrt 25 专用
 # ==========================================
 
@@ -28,6 +28,32 @@ fi
 
 # ----- 创建自启动目录 -----
 mkdir -p files/etc/init.d files/etc/rc.d
+
+# ----- 创建 AirPrint 服务文件（avahi）-----
+echo "===== 创建 AirPrint 服务文件 ====="
+mkdir -p files/etc/avahi/services
+cat > files/etc/avahi/services/cups.service << 'EOF'
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">%h - CUPS</name>
+  <service>
+    <type>_ipp._tcp</type>
+    <subtype>_universal._sub._ipp._tcp</subtype>
+    <port>631</port>
+    <txt-record>txtver=1</txt-record>
+    <txt-record>qtotal=1</txt-record>
+    <txt-record>Transparent=T</txt-record>
+    <txt-record>URF=WFD</txt-record>
+    <txt-record>Color=T</txt-record>
+    <txt-record>Duplex=T</txt-record>
+    <txt-record>Copies=T</txt-record>
+  </service>
+</service-group>
+EOF
+chmod 644 files/etc/avahi/services/cups.service
+echo "  ✅ AirPrint 服务文件已创建"
+
 # ----- 服务自启动脚本 -----
 cat > files/etc/init.d/custom-autostart << 'EOF'
 #!/bin/sh /etc/rc.common
@@ -130,12 +156,33 @@ echo "===== 安装中文语言包 ====="
 ./scripts/feeds install luci-i18n-attendedsysupgrade-zh-cn && echo "  ✅ luci-i18n-attendedsysupgrade-zh-cn 安装成功" || echo "  ⚠️ luci-i18n-attendedsysupgrade-zh-cn 安装失败"
 ./scripts/feeds install luci-i18n-wireguard-zh-cn && echo "  ✅ luci-i18n-wireguard-zh-cn 安装成功" || echo "  ⚠️ luci-i18n-wireguard-zh-cn 安装失败"
 ./scripts/feeds install luci-i18n-ttyd-zh-cn && echo "  ✅ luci-i18n-ttyd-zh-cn 安装成功" || echo "  ⚠️ luci-i18n-ttyd-zh-cn 安装失败"
+
 # ==========================================
 # CUPS 相关包安装
 # ==========================================
 echo "===== 安装 CUPS 相关包 ====="
 echo "从 openwrt-cups 源安装打印驱动包..."
-./scripts/feeds install -f -p cups ghostscript 2>/dev/null && echo "  ✅ ghostscript 安装成功" || echo "  ⚠️ ghostscript 安装失败"
+
+# +++ 修改点 1：修复 ghostscript 编译参数（在安装前修复）+++
+# 查找并修复 ghostscript Makefile
+GS_MAKEFILE=$(find feeds -name "ghostscript" -type d 2>/dev/null | head -1)/Makefile
+if [ -f "$GS_MAKEFILE" ]; then
+    sed -i 's/--enable-cups/--with-install-cups/g' "$GS_MAKEFILE"
+    echo "  🔧 ghostscript Makefile 已修复"
+fi
+
+./scripts/feeds install -f -p cups ghostscript && echo "  ✅ ghostscript 安装成功" || echo "  ⚠️ ghostscript 安装失败"
+
+# +++ 修改点 2：如果 ghostscript 安装失败，尝试二次修复 +++
+if ! grep -q "CONFIG_PACKAGE_ghostscript=y" .config 2>/dev/null; then
+    echo "  🔧 尝试二次修复 ghostscript..."
+    GS_MAKEFILE=$(find feeds -name "ghostscript" -type d 2>/dev/null | head -1)/Makefile
+    if [ -f "$GS_MAKEFILE" ]; then
+        sed -i 's/--enable-cups/--with-install-cups/g' "$GS_MAKEFILE"
+        ./scripts/feeds install -f -p cups ghostscript 2>/dev/null
+    fi
+fi
+
 ./scripts/feeds install -f -p cups gutenprint 2>/dev/null && echo "  ✅ gutenprint 安装成功" || echo "  ⚠️ gutenprint 安装失败"
 ./scripts/feeds install -f -p cups foomatic-db 2>/dev/null && echo "  ✅ foomatic-db 安装成功" || echo "  ⚠️ foomatic-db 安装失败"
 ./scripts/feeds install -f -p cups foomatic-db-engine 2>/dev/null && echo "  ✅ foomatic-db-engine 安装成功" || echo "  ⚠️ foomatic-db-engine 安装失败"
@@ -147,4 +194,34 @@ echo "从官方源安装 avahi..."
 ./scripts/feeds install avahi-dbus-daemon 2>/dev/null && echo "  ✅ avahi-dbus-daemon 安装成功" || {
     ./scripts/feeds install avahi-nodbus-daemon 2>/dev/null && echo "  ✅ avahi-nodbus-daemon 安装成功" || echo "  ⚠️ avahi 安装失败"
 }
-echo "✅ diy-part2.sh 执行完成"
+
+# 从 brlaser 源安装 Brother 驱动
+echo "===== 安装 Brother 打印机驱动 ====="
+if ./scripts/feeds update brlaser; then
+    echo "  ✅ brlaser feed 更新成功"
+    if ./scripts/feeds install brlaser; then
+        echo "  ✅ brlaser 驱动安装成功"
+    else
+        echo "  ❌ brlaser 驱动安装失败"
+        exit 1
+    fi
+else
+    echo "  ❌ brlaser feed 更新失败"
+    exit 1
+fi
+
+# 安装 HP 打印机驱动
+echo "===== 安装 HP 打印机驱动 ====="
+if ./scripts/feeds install -f -p cups hplip-ppds 2>/dev/null; then
+    echo "  ✅ hplip-ppds 安装成功"
+else
+    echo "  ❌ hplip-ppds 安装失败"
+    exit 1
+fi
+# +++ 追加：强制启用打印机驱动配置 +++
+echo "===== 强制启用驱动配置 ====="
+echo "CONFIG_PACKAGE_brlaser=y" >> .config
+echo "CONFIG_PACKAGE_hplip-ppds=y" >> .config
+echo "CONFIG_PACKAGE_ghostscript=y" >> .config
+
+echo "✅ diy-part2-25.sh 执行完成"
