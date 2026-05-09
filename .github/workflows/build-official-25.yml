@@ -306,18 +306,54 @@ jobs:
           echo "║  核心功能就绪: $TOTAL 包        ║"
           echo "╚══════════════════════════════════════╝"
         fi
+# ... 前面的内容保持不变 ...
+
     - name: Download packages
       run: cd openwrt && make download -j8 || make download -j1 V=s
+      
     - name: Compile firmware
       id: compile
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
+        
+        # ============================================
+        # 修复 cups-bjnp 编译顺序问题
+        # 先单独编译 cups，再编译其他所有包
+        # ============================================
+        echo ""
+        echo "=========================================="
+        echo "🔧 预编译 cups 以解决依赖顺序问题"
+        echo "=========================================="
+        
+        # 检查 cups 是否在配置中启用
+        if grep -q "CONFIG_PACKAGE_cups=y" .config; then
+          echo "✅ cups 已启用，开始预编译..."
+          
+          # 先编译 cups 核心包（单线程确保顺序）
+          make package/feeds/immortalwrt/cups/compile -j1
+          
+          # 安装 cups（将文件安装到 staging_dir）
+          make package/feeds/immortalwrt/cups/install
+          
+          echo "✅ cups 预编译完成"
+        else
+          echo "⚠️ cups 未启用，跳过预编译"
+        fi
+        
+        echo ""
+        echo "=========================================="
+        echo "📦 编译所有固件包"
+        echo "=========================================="
+        
+        # 正常编译（如果失败则降级到单线程）
         make -j$(nproc) || make -j8 || make -j1 V=s
+        
         echo "status=success" >> $GITHUB_OUTPUT
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        
     - name: Organize files
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
@@ -326,6 +362,8 @@ jobs:
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
+        
+# ... 后面的内容保持不变 ...
     - name: Upload firmware to Artifacts
       uses: actions/upload-artifact@main
       if: steps.organize.outputs.status == 'success' && !cancelled()
