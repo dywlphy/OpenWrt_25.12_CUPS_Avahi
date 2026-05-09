@@ -23,7 +23,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
-
     steps:
     - name: Checkout
       uses: actions/checkout@main
@@ -40,19 +39,17 @@ jobs:
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone Asia/Shanghai
 
-    - name: Clone OpenWrt main
+    - name: Clone OpenWrt 24.10
       run: |
-        git clone https://github.com/openwrt/openwrt -b openwrt-25.12 openwrt
-
+        git clone https://github.com/openwrt/openwrt -b openwrt-24.10 openwrt
     - name: Load custom feeds and config
       run: |
-        [ -f config-25.txt ] && cp config-25.txt openwrt/.config
+        [ -f config.txt ] && cp config.txt openwrt/.config
         [ -f diy-part1-25.sh ] && cp diy-part1-25.sh openwrt/
         [ -f diy-part2-25.sh ] && cp diy-part2-25.sh openwrt/
         chmod +x openwrt/diy-part1-25.sh openwrt/diy-part2-25.sh 2>/dev/null || true
         cd openwrt
         ./diy-part1-25.sh
-
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
     - name: Install feeds
@@ -64,9 +61,6 @@ jobs:
     - name: Remove conflicting packages
       run: |
         cd openwrt
-        # 移除 immortalwrt feed 中有问题的 cups（libz 依赖缺失）
-        rm -rf feeds/immortalwrt/utils/cups 2>/dev/null || true
-        rm -rf feeds/immortalwrt/utils/libcups 2>/dev/null || true
         # 原有的冲突包清理
         rm -rf feeds/smpackage/{base-files,dnsmasq,firewall*,fullconenat,libnftnl,nftables,ppp,opkg,ucl,upx,vsftpd*,miniupnpd-iptables,wireless-regdb} 2>/dev/null || true
         rm -rf feeds/packages/net/onionshare-cli 2>/dev/null || true
@@ -152,8 +146,16 @@ jobs:
         enable_pkg "luci-i18n-ttyd-zh-cn"
         enable_pkg "luci-i18n-ssr-plus-zh-cn"
         enable_pkg "luci-i18n-cupsd-zh-cn"
+        enable_pkg "brlaser"
+        enable_pkg "hplip-ppds"
         
         echo ""
+        echo "【强制启用基础依赖】"
+        enable_pkg "zlib"
+        enable_pkg "libcups"
+        enable_pkg "libpng"
+        enable_pkg "libjpeg"
+        enable_pkg "libtiff"
         echo "【强制启用核心功能包】"
         enable_pkg "cups"
         enable_pkg "cups-filters"
@@ -173,10 +175,12 @@ jobs:
         enable_pkg "luci-app-vlmcsd"
         enable_pkg "curl"
         
-        enable_pkg "ghostscript"
-        enable_pkg "gutenprint"
-        enable_pkg "foomatic-db"
-        enable_pkg "foomatic-db-engine"
+        # 删除这4行
+        # enable_pkg "ghostscript"
+        # enable_pkg "gutenprint"
+        # enable_pkg "foomatic-db"
+        # enable_pkg "foomatic-db-engine"
+        enable_pkg "openprinting-cups-filters"
         sed -i 's/^CONFIG_PACKAGE_mosdns=y/# CONFIG_PACKAGE_mosdns is not set/' .config
         sed -i 's/^CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_MosDNS=y/# CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_MosDNS is not set/' .config
         sed -i 's/CONFIG_GRUB_TIMEOUT=.*/CONFIG_GRUB_TIMEOUT=0/' .config
