@@ -207,13 +207,11 @@ echo "从 smpackage 源安装 CUPS 核心包..."
 # ========== 修复 cups-bjnp Makefile（必须在 feeds install 之后）==========
 CUPSBJNP_MK="feeds/immortalwrt/utils/cups-bjnp/Makefile"
 if [ -f "$CUPSBJNP_MK" ]; then
-    # 修复 backend 目录路径
-    sed -i 's|--with-cupsbackenddir=$(STAGING_DIR)/usr/include/cups|--with-cupsbackenddir=$(STAGING_DIR)/usr/lib/cups/backend|' "$CUPSBJNP_MK"
-    # 添加编译顺序依赖
+    # 删除 --with-cupsbackenddir 参数，让 configure 自动检测
+    sed -i 's/ --with-cupsbackenddir=$(STAGING_DIR)\/usr\/lib\/cups\/backend//' "$CUPSBJNP_MK"
+    sed -i 's/ --with-cupsbackenddir=$(STAGING_DIR)\/usr\/include\/cups//' "$CUPSBJNP_MK"
     sed -i '/^DEPENDS:=/ s/$/ cups/' "$CUPSBJNP_MK"
     echo "  ✅ cups-bjnp Makefile 已修复"
-else
-    echo "  ⚠️ 未找到 cups-bjnp Makefile"
 fi
 
 echo "从官方源安装 avahi..."
