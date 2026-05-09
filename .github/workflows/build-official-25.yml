@@ -128,6 +128,7 @@ jobs:
         enable_pkg "rpcd"
         enable_pkg "rpcd-mod-file"
         enable_pkg "rpcd-mod-iwinfo"
+        enable_pkg "libiwinfo"          # ← 添加这行
         enable_pkg "rpcd-mod-rpcsys"
         enable_pkg "rpcd-mod-rrdns"
         enable_pkg "uhttpd"
@@ -141,6 +142,7 @@ jobs:
         enable_pkg "ucode-mod-ubus"
         enable_pkg "ucode-mod-uci"
         enable_pkg "luci-theme-bootstrap"
+        enable_pkg "libiwinfo"
         
         echo ""
         echo "【强制启用中文语言包】"
