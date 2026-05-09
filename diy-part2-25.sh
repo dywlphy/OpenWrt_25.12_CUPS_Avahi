@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==========================================
 # diy-part2.sh - 自启动脚本 + 自动共享 + CUPS + GRUB修复
-# OpenWrt 25.12 专用
+# OpenWrt 25 专用
 # ==========================================
 
 # ==========================================
@@ -28,21 +28,11 @@ if [ -f "$TIFF_MK" ]; then
 fi
 
 # 修复 curl
-CURL_MK=$(find feeds -name "curl" -type d 2>/dev/null | head -1)/Makefile
-if [ -f "$CURL_MK" ]; then
-    sed -i 's/--enable-debug/--disable-debug/g' "$CURL_MK"
-    echo "  ✅ curl Makefile 已修复"
-fi
-
-# 修复 cups-bjnp
-CUPSBJNP_MK="feeds/immortalwrt/utils/cups-bjnp/Makefile"
-if [ -f "$CUPSBJNP_MK" ]; then
-    # 修复 cupsbackenddir 路径
-    sed -i 's|--with-cupsbackenddir=$(STAGING_DIR)/usr/include/cups|--with-cupsbackenddir=$(STAGING_DIR)/usr/lib/cups/backend|' "$CUPSBJNP_MK"
-    # 额外添加 CUPS_CONFIG 环境变量，帮助 configure 找到 cups-config
-    sed -i 's|CONFIGURE_ARGS =|CONFIGURE_ARGS = CUPS_CONFIG=$(STAGING_DIR)/host/bin/cups-config |' "$CUPSBJNP_MK"
-    echo "  ✅ cups-bjnp Makefile 已修复"
-fi
+#CURL_MK=$(find feeds -name "curl" -type d 2>/dev/null | head -1)/Makefile
+#if [ -f "$CURL_MK" ]; then
+    #sed -i 's/--enable-debug/--disable-debug/g' "$CURL_MK"
+    #echo "  ✅ curl Makefile 已修复"
+#fi
 
 # 修复 ghostscript
 GS_MAKEFILE=$(find feeds -name "ghostscript" -type d 2>/dev/null | head -1)/Makefile
@@ -51,7 +41,7 @@ if [ -f "$GS_MAKEFILE" ]; then
     echo "  🔧 ghostscript Makefile 已修复"
 fi
 
-# 修复 cups Makefile（锁死在 smpackage 源）
+# 修复 cups Makefile
 CUPS_MK="feeds/smpackage/cups/Makefile"
 if [ -f "$CUPS_MK" ]; then
     sed -i 's/DEPENDS:=/DEPENDS:=+libusb-1.0 +libstdcpp /' "$CUPS_MK"
@@ -213,6 +203,19 @@ echo "从 immortalwrt 源安装扩展包..."
 ./scripts/feeds install -f -p immortalwrt cups-bjnp && echo "  ✅ cups-bjnp 安装成功" || echo "  ⚠️ cups-bjnp 安装失败"
 echo "从 smpackage 源安装 CUPS 核心包..."
 ./scripts/feeds install -f -p smpackage cups cups-filters dbus luci-app-cupsd && echo "  ✅ CUPS 核心包安装成功" || echo "  ⚠️ CUPS 核心包安装失败"
+
+# ========== 修复 cups-bjnp Makefile（必须在 feeds install 之后）==========
+CUPSBJNP_MK="feeds/immortalwrt/utils/cups-bjnp/Makefile"
+if [ -f "$CUPSBJNP_MK" ]; then
+    # 修复 backend 目录路径
+    sed -i 's|--with-cupsbackenddir=$(STAGING_DIR)/usr/include/cups|--with-cupsbackenddir=$(STAGING_DIR)/usr/lib/cups/backend|' "$CUPSBJNP_MK"
+    # 添加编译顺序依赖
+    sed -i '/^DEPENDS:=/ s/$/ cups/' "$CUPSBJNP_MK"
+    echo "  ✅ cups-bjnp Makefile 已修复"
+else
+    echo "  ⚠️ 未找到 cups-bjnp Makefile"
+fi
+
 echo "从官方源安装 avahi..."
 ./scripts/feeds install avahi-dbus-daemon && echo "  ✅ avahi-dbus-daemon 安装成功" || {
     ./scripts/feeds install avahi-nodbus-daemon && echo "  ✅ avahi-nodbus-daemon 安装成功" || echo "  ⚠️ avahi 安装失败"
@@ -239,5 +242,15 @@ echo "===== 强制启用驱动配置 ====="
 echo "CONFIG_PACKAGE_brlaser=y" >> .config
 echo "CONFIG_PACKAGE_hplip-ppds=y" >> .config
 echo "CONFIG_PACKAGE_ghostscript=y" >> .config
+
+# 验证 curl Makefile 语法
+CURL_MK="feeds/packages/net/curl/Makefile"
+if [ -f "$CURL_MK" ]; then
+    echo "  ✅ curl Makefile 存在"
+    # 检查是否有明显的语法错误
+    if grep -q "PKG_NAME:=curl" "$CURL_MK"; then
+        echo "  ✅ curl Makefile 格式正确"
+    fi
+fi
 
 echo "✅ diy-part2.sh 执行完成"
