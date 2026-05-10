@@ -98,30 +98,6 @@ if [ -f "$CUPS_MK" ]; then
     echo "  ✅ cups Makefile 已修复"
 fi
 
-# 修复 dbus Makefile - 添加 dbus-libs 子包
-DBUS_MK="feeds/packages/utils/dbus/Makefile"
-if [ -f "$DBUS_MK" ]; then
-    if ! grep -q "Package/dbus-libs" "$DBUS_MK"; then
-        cat >> "$DBUS_MK" << 'EOF'
-
-define Package/dbus-libs
-  SECTION:=libs
-  CATEGORY:=Libraries
-  DEPENDS:=+libexpat
-  TITLE:=D-Bus library
-endef
-
-define Package/dbus-libs/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libdbus-1.so* $(1)/usr/lib/
-endef
-
-$(eval $(call BuildPackage,dbus-libs))
-EOF
-        echo "  ✅ dbus Makefile 已修复（添加 dbus-libs 子包）"
-    fi
-fi
-
 # ==========================================
 # 3. 创建目录和文件
 # ==========================================
@@ -484,8 +460,8 @@ echo "从 openwrt-cups 源安装打印驱动包..."
 ./scripts/feeds install -f -p cups foomatic-db-engine && echo "  ✅ foomatic-db-engine 安装成功" || echo "  ⚠️ foomatic-db-engine 安装失败"
 echo "从 immortalwrt 源安装扩展包..."
 ./scripts/feeds install -f -p immortalwrt cups-bjnp && echo "  ✅ cups-bjnp 安装成功" || echo "  ⚠️ cups-bjnp 安装失败"
-echo "从 smpackage 源安装 CUPS 核心包..."
-./scripts/feeds install -f -p smpackage cups cups-filters dbus luci-app-cupsd && echo "  ✅ CUPS 核心包安装成功" || echo "  ⚠️ CUPS 核心包安装失败"
+# 从 smpackage 源安装 CUPS 核心包（不要包含 dbus）
+./scripts/feeds install -f -p smpackage cups cups-filters luci-app-cupsd && echo "  ✅ CUPS 核心包安装成功" || echo "  ⚠️ CUPS 核心包安装失败"
 
 # ========== 修复 cups-bjnp Makefile（必须在 feeds install 之后）==========
 CUPSBJNP_MK="feeds/immortalwrt/utils/cups-bjnp/Makefile"
