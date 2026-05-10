@@ -74,11 +74,25 @@ jobs:
         cd openwrt
         # 原有的冲突包清理
         rm -rf feeds/smpackage/{base-files,dnsmasq,firewall*,fullconenat,libnftnl,nftables,ppp,opkg,ucl,upx,vsftpd*,miniupnpd-iptables,wireless-regdb} 2>/dev/null || true
+        
+        # 删除所有第三方 dbus 和 curl
+        rm -rf feeds/kenzo/curl feeds/kenzo/dbus 2>/dev/null || true
+        rm -rf feeds/small/dbus 2>/dev/null || true
+        rm -rf feeds/smpackage/dbus 2>/dev/null || true
+        
+        # 删除 onionshare-cli
         rm -rf feeds/packages/net/onionshare-cli 2>/dev/null || true
         find . -name "onionshare-cli" -type d -exec rm -rf {} \; 2>/dev/null || true
+        
+        # 重新安装官方 dbus
+        ./scripts/feeds uninstall dbus
+        ./scripts/feeds install -f -p packages dbus
+        
+        # 清理 index 中的 onionshare-cli
         for idx in feeds/*.index; do
           [ -f "$idx" ] && sed -i '/onionshare-cli/d' "$idx" || true
         done
+        
         rm -rf tmp/
         echo "✅ 冲突包已清除"
     - name: Run make defconfig
@@ -170,8 +184,8 @@ jobs:
         enable_pkg "libjpeg"
         enable_pkg "libstdcpp"
         enable_pkg "libusb-1.0"
-        enable_pkg "dbus"                    # dbus 守护进程和库
         enable_pkg "libexpat"
+        enable_pkg "dbus"                    # dbus 守护进程和库
         enable_pkg "libdaemon"               # avahi 依赖
         enable_pkg "kmod-usb-printer"
 
