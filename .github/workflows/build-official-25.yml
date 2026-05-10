@@ -188,6 +188,7 @@ jobs:
         enable_pkg "dbus"                    # dbus 守护进程和库
         enable_pkg "libdaemon"               # avahi 依赖
         enable_pkg "kmod-usb-printer"
+        enable_pkg "dbus-libs"
 
         echo ""
         echo "【强制启用核心功能包】"
