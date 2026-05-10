@@ -168,18 +168,20 @@ jobs:
         enable_pkg "libcups"
         enable_pkg "libpng"
         enable_pkg "libjpeg"
-        # enable_pkg "libtiff"
         enable_pkg "libstdcpp"
         enable_pkg "libusb-1.0"
-        enable_pkg "libdbus"
-        enable_pkg "libexpat"          # ← dbus 依赖
+        enable_pkg "dbus"                    # dbus 守护进程和库
+        enable_pkg "libexpat"
+        enable_pkg "libdaemon"               # avahi 依赖
         enable_pkg "kmod-usb-printer"
+
+        echo ""
         echo "【强制启用核心功能包】"
         enable_pkg "cups"
         enable_pkg "cups-filters"
         enable_pkg "cups-bjnp"
+        enable_pkg "avahi"                   # 这个包提供 libavahi-common 和 libavahi-core
         enable_pkg "avahi-dbus-daemon"
-        enable_pkg "dbus"
         enable_pkg "luci-app-cupsd"
         enable_pkg "ksmbd-server"
         enable_pkg "luci-app-ksmbd"
@@ -337,6 +339,18 @@ jobs:
           grep "CONFIG_PACKAGE_${pkg}=y" .config || echo "  $pkg 未启用"
           grep "CONFIG_PACKAGE_lib${pkg}=y" .config || echo "  ⚠️ lib${pkg} 未启用"
         done
+    - name: Pre-compile dependencies
+      run: |
+        cd openwrt
+        echo "预编译 dbus 相关依赖..."
+        make package/libs/expat/compile -j1
+        make package/system/dbus/compile -j1
+        make package/system/dbus/install
+        echo "预编译 avahi..."
+        make package/feeds/packages/avahi/compile -j1
+        echo "预编译 cups..."
+        make package/feeds/smpackage/cups/compile -j1
+        make package/feeds/smpackage/cups/install
     - name: Download packages
       run: cd openwrt && make download -j8 || make download -j1 V=s
     - name: Compile OpenWRT firmware
