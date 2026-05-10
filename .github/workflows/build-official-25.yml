@@ -339,15 +339,9 @@ jobs:
           grep "CONFIG_PACKAGE_${pkg}=y" .config || echo "  $pkg 未启用"
           grep "CONFIG_PACKAGE_lib${pkg}=y" .config || echo "  ⚠️ lib${pkg} 未启用"
         done
-    - name: Pre-compile dependencies
+    - name: Pre-compile cups only
       run: |
         cd openwrt
-        echo "预编译 dbus 相关依赖..."
-        make package/libs/expat/compile -j1
-        make package/system/dbus/compile -j1
-        make package/system/dbus/install
-        echo "预编译 avahi..."
-        make package/feeds/packages/avahi/compile -j1
         echo "预编译 cups..."
         make package/feeds/smpackage/cups/compile -j1
         make package/feeds/smpackage/cups/install
