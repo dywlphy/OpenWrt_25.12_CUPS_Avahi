@@ -107,11 +107,15 @@ jobs:
         echo "--- Makefile ---"
         test -f package/cups-zh-cn/Makefile && echo "OK: Makefile 存在" || echo "FAIL: Makefile 不存在"
         echo ""
-        echo "--- Web模板文件数 ---"
-        find package/cups-zh-cn/files/usr/share/cups/templates/zh_CN/ -type f 2>/dev/null | wc -l
+        echo "--- CUPS汉化文件数 ---"
+        find package/cups-zh-cn/files/usr/share/cups/zh_CN/ -type f 2>/dev/null | wc -l
         echo ""
-        echo "--- 帮助文档文件数 ---"
-        find package/cups-zh-cn/files/usr/share/cups/doc-root/zh_CN/ -type f 2>/dev/null | wc -l
+        echo "--- uci-defaults脚本 ---"
+        test -f package/base-files/files/etc/uci-defaults/98-cups-zh-cn && echo "OK: CUPS脚本存在" || echo "FAIL: CUPS脚本不存在"
+        test -f package/base-files/files/etc/uci-defaults/99-grub-timeout && echo "OK: GRUB脚本存在" || echo "FAIL: GRUB脚本不存在"
+        echo ""
+        echo "--- fullconenat模块 ---"
+        test -d package/iptables-mod-fullconenat && echo "OK: fullconenat存在" || echo "FAIL: fullconenat不存在"
 
     # SSH调试（可选）
     - name: SSH connection to Actions
