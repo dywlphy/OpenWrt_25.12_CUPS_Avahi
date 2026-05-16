@@ -92,11 +92,64 @@ endef
 define Package/cups-zh-cn/postinst
 #!/bin/sh
 [ -n "$${IPKG_INSTROOT}" ] || {
+	# 1. 替换CUPS中文模板
 	[ -d /usr/share/cups/zh_CN ] && {
 		cp -rf /usr/share/cups/zh_CN/* /usr/share/cups/templates/
 		rm -rf /usr/share/cups/zh_CN
-		[ -x /etc/init.d/cupsd ] && /etc/init.d/cupsd restart 2>/dev/null
 	}
+	# 2. 配置cupsd.conf（局域网访问 + Avahi发现）
+	cat > /etc/cups/cupsd.conf << 'CONF'
+Listen *:631
+Listen /var/run/cups/cups.sock
+LogLevel warn
+AccessLog /var/log/cups/access_log
+ErrorLog /var/log/cups/error_log
+DefaultPolicy default
+
+<Location />
+  Order allow,deny
+  Allow @LOCAL
+</Location>
+
+<Location /admin>
+  Order allow,deny
+  Allow @LOCAL
+</Location>
+
+<Location /admin/conf>
+  AuthType Default
+  Require user @SYSTEM
+  Order allow,deny
+  Allow @LOCAL
+</Location>
+
+<Location /printers>
+  Order allow,deny
+  Allow @LOCAL
+</Location>
+
+Browsing On
+BrowseLocalProtocols dnssd
+CONF
+	# 3. 配置Avahi服务（打印机发现）
+	mkdir -p /etc/avahi/services
+	cat > /etc/avahi/services/cups.service << 'AVAHI'
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">CUPS 打印服务器 @ %h</name>
+  <service>
+    <type>_ipp._tcp</type>
+    <port>631</port>
+    <txt-record>txtvers=1</txt-record>
+    <txt-record>qtotal=1</txt-record>
+    <txt-record>rp=printers/</txt-record>
+  </service>
+</service-group>
+AVAHI
+	# 4. 重启服务
+	[ -x /etc/init.d/avahi-daemon ] && /etc/init.d/avahi-daemon restart 2>/dev/null
+	[ -x /etc/init.d/cupsd ] && /etc/init.d/cupsd restart 2>/dev/null
 }
 exit 0
 endef
