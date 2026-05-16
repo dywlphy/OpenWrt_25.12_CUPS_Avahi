@@ -1,6 +1,7 @@
 #
 # OpenWrt 25.12 Configuration
 # Target: x86_64
+# 新增: Full Cone NAT + NAT类型检测
 #
 
 # ============================================
@@ -47,6 +48,7 @@ CONFIG_PACKAGE_libustream-openssl=y
 CONFIG_PACKAGE_logd=y
 CONFIG_PACKAGE_mtd=y
 CONFIG_PACKAGE_netifd=y
+CONFIG_PACKAGE_opkg=y
 CONFIG_PACKAGE_procd=y
 CONFIG_PACKAGE_procd-seccomp=y
 CONFIG_PACKAGE_procd-ujail=y
@@ -128,7 +130,7 @@ CONFIG_PACKAGE_ddns-scripts-cloudflare=y
 CONFIG_PACKAGE_ddns-scripts-dnspod=y
 
 # ============================================
-# UPnP
+# UPnP（自动端口映射，配合Full Cone NAT使用）
 # ============================================
 CONFIG_PACKAGE_luci-app-upnp=y
 CONFIG_PACKAGE_luci-i18n-upnp-zh-cn=y
@@ -214,9 +216,8 @@ CONFIG_PACKAGE_luci-i18n-filemanager-zh-cn=y
 # ============================================
 CONFIG_PACKAGE_luci-app-firewall=y
 CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
-# 25.12: opkg 替换为 apk，包管理界面改名
-CONFIG_PACKAGE_luci-app-package-manager=y
-CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn=y
+CONFIG_PACKAGE_luci-app-opkg=y
+CONFIG_PACKAGE_luci-i18n-opkg-zh-cn=y
 CONFIG_PACKAGE_luci-app-ttyd=y
 CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
 CONFIG_PACKAGE_ttyd=y
@@ -228,14 +229,16 @@ CONFIG_PACKAGE_luci-theme-bootstrap=y
 CONFIG_PACKAGE_luci-theme-material=y
 
 # ============================================
-# LuCI核心（25.12: 移除luci-compat和luci-mod-admin-full）
+# LuCI核心
 # ============================================
 CONFIG_PACKAGE_luci=y
 CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-compat=y
 CONFIG_PACKAGE_luci-lib-base=y
 CONFIG_PACKAGE_luci-lib-ip=y
 CONFIG_PACKAGE_luci-lib-jsonc=y
 CONFIG_PACKAGE_luci-lib-nixio=y
+CONFIG_PACKAGE_luci-mod-admin-full=y
 CONFIG_PACKAGE_luci-mod-network=y
 CONFIG_PACKAGE_luci-mod-status=y
 CONFIG_PACKAGE_luci-mod-system=y
@@ -312,14 +315,31 @@ CONFIG_PACKAGE_luci-i18n-pbr-zh-cn=y
 CONFIG_PACKAGE_frp=y
 
 # ============================================
+# Full Cone NAT（全锥形NAT，改善P2P/游戏/视频会议连接）
+# 内核模块 + iptables扩展
+# ============================================
+CONFIG_PACKAGE_kmod-ipt-fullconenat=y
+CONFIG_PACKAGE_iptables-mod-fullconenat=y
+
+# ============================================
+# NAT类型检测工具（刷机后可测试NAT类型）
+# ============================================
+CONFIG_PACKAGE_stun-client=y
+
+# NAT连接跟踪助手（FTP/SIP/RTSP等协议穿透）
+CONFIG_PACKAGE_kmod-nf-nathelper=y
+CONFIG_PACKAGE_kmod-nf-nathelper-extra=y
+
+# IPv6 NAT
+CONFIG_PACKAGE_kmod-ipt-nat6=y
+
+# CAKE连接跟踪（SQM增强）
+CONFIG_PACKAGE_kmod-sched-ctinfo=y
+
+# ============================================
 # 禁用不需要的包
 # ============================================
 # CONFIG_PACKAGE_dnsmasq is not set
-# CONFIG_PACKAGE_opkg is not set
-# CONFIG_PACKAGE_luci-app-opkg is not set
-# CONFIG_PACKAGE_luci-compat is not set
-# CONFIG_PACKAGE_luci-mod-admin-full is not set
-# CONFIG_PACKAGE_luci-lib-ipkg is not set
 # CONFIG_PACKAGE_ppp-mod-pppoa is not set
 # CONFIG_PACKAGE_ppp-mod-pppoe is not set
 # CONFIG_PACKAGE_ppp-mod-pppol2tp is not set
