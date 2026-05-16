@@ -9,7 +9,7 @@ echo "OpenWrt 25.12 Build"
 echo "diy-part1.sh - 配置feeds源"
 echo "=========================================="
 
-# 配置feeds源（25.12分支）
+# 配置feeds源
 echo "[1/3] 配置feeds源..."
 
 cat > feeds.conf << 'EOF'
@@ -26,8 +26,9 @@ cat feeds.conf
 echo ""
 echo "[3/3] OpenWrt版本信息:"
 echo "Branch: openwrt-25.12"
+echo "Target: Official Stable"
 echo "Kernel: 6.12"
-echo "Target: x86_64"
+echo "Package Manager: apk (替代opkg)"
 
 echo ""
 echo "=========================================="
