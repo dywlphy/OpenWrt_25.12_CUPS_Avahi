@@ -77,9 +77,9 @@ jobs:
         path: |
           /workdir/openwrt/staging_dir
           /workdir/openwrt/build_dir
-        key: openwrt-build-25.12-${{ hashFiles('config.txt') }}-${{ github.run_id }}
+        key: openwrt-build-25.12-${{ hashFiles('config.txt', 'diy-part2.sh') }}-${{ github.run_id }}
         restore-keys: |
-          openwrt-build-25.12-${{ hashFiles('config.txt') }}-
+          openwrt-build-25.12-${{ hashFiles('config.txt', 'diy-part2.sh') }}-
           openwrt-build-25.12-
 
     # 更新feeds
@@ -96,7 +96,22 @@ jobs:
         [ -e config.txt ] && cp config.txt openwrt/.config
         chmod +x diy-part2.sh
         cd openwrt
+        export GITHUB_WORKSPACE="${{ github.workspace }}"
         $GITHUB_WORKSPACE/diy-part2.sh
+
+    # 验证CUPS汉化包是否正确创建
+    - name: Verify CUPS Chinese package
+      run: |
+        cd openwrt
+        echo "=== cups-zh-cn 包验证 ==="
+        echo "--- Makefile ---"
+        test -f package/cups-zh-cn/Makefile && echo "OK: Makefile 存在" || echo "FAIL: Makefile 不存在"
+        echo ""
+        echo "--- Web模板文件数 ---"
+        find package/cups-zh-cn/files/usr/share/cups/templates/zh_CN/ -type f 2>/dev/null | wc -l
+        echo ""
+        echo "--- 帮助文档文件数 ---"
+        find package/cups-zh-cn/files/usr/share/cups/doc-root/zh_CN/ -type f 2>/dev/null | wc -l
 
     # SSH调试（可选）
     - name: SSH connection to Actions
@@ -120,6 +135,9 @@ jobs:
         sed -i 's/CONFIG_PACKAGE_dnsmasq=m/# CONFIG_PACKAGE_dnsmasq is not set/' .config
         # 强制设置GRUB等待时间为2秒
         sed -i 's/CONFIG_GRUB_TIMEOUT=.*/CONFIG_GRUB_TIMEOUT=2/' .config
+        # 验证GRUB超时设置
+        echo "=== GRUB超时设置 ==="
+        grep CONFIG_GRUB_TIMEOUT .config
         make defconfig
         make download -j8
         find dl -size -1024c -exec rm -f {} \;
@@ -135,17 +153,25 @@ jobs:
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> "$GITHUB_ENV"
         echo "FILE_DATE=_$(date +%Y%m%d%H%M)" >> "$GITHUB_ENV"
 
+    # 验证编译结果
+    - name: Verify build result
+      if: steps.compile.outputs.status == 'success'
+      run: |
+        cd openwrt
+        echo "=== 编译出的cups相关包 ==="
+        find bin -name "*cups*" -type f 2>/dev/null || echo "未找到"
+        echo ""
+        echo "=== 固件文件 ==="
+        ls -lh bin/targets/x86/64/*.{img.gz,sha256sums} 2>/dev/null || echo "未找到固件"
+
     # 整理固件文件
     - name: Organize firmware files
       if: steps.compile.outputs.status == 'success'
       run: |
         cd openwrt
         mkdir -p release
-        # 复制固件文件
         cp bin/targets/x86/64/*.{img.gz,sha256sums} release/ 2>/dev/null || true
-        # 复制其他文件
         cp -r bin/targets/x86/64/packages release/ 2>/dev/null || true
-        # 生成版本信息
         echo "OpenWrt 25.12 (Dave's Guitar)" > release/build_info.txt
         echo "Build Date: $(date '+%Y-%m-%d %H:%M:%S')" >> release/build_info.txt
         echo "Target: x86_64" >> release/build_info.txt
